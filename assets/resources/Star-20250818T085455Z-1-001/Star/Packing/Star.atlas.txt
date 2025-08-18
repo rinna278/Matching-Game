@@ -1,0 +1,10 @@
+Star.png
+size:392,260
+filter:Linear,Linear
+pma:true
+Star_Center_Off
+bounds:259,130,130,127
+Star_Center_On
+bounds:259,1,130,127
+Yellow_Flare_Add
+bounds:1,1,256,256
