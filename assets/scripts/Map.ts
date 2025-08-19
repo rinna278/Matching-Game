@@ -1,4 +1,7 @@
-import { _decorator, Component, Layers, Node, Sprite, SpriteFrame, UITransform, Input, resources } from 'cc';
+import { _decorator, Component, Layers, Node, SpriteFrame, Input, resources, Prefab, instantiate, Vec3, tween, UIOpacity, UITransform } from 'cc';
+import { Tile } from './Tile';
+import { AudioManager } from './AudioManager';
+
 const { ccclass, property } = _decorator;
 
 @ccclass('Map')
@@ -6,15 +9,48 @@ export class Map extends Component {
     @property([SpriteFrame])
     objectSprites: SpriteFrame[] = [];
 
+    @property(SpriteFrame)
+    tileBGSprite: SpriteFrame | null = null;
+
+    @property(Prefab)
+    starPrefab: Prefab | null = null;
+
+    @property(Prefab)
+    linePrefab: Prefab | null = null;
+
+    @property(Node)
+    lineNode: Node | null = null;
+
+    @property(Node)
+    starNode: Node | null = null;
+
+    @property(AudioManager)
+    audioManager: AudioManager | null = null;
+
     private rows: number = 6;
     private cols: number = 10;
     private tileSize: number = 150;
-
-    // Lưu tile được chọn lần đầu
-    private firstSelected: Node | null = null;
-
+    private firstSelected: Tile | null = null;
+    private tiles: Tile[][] = [];
 
     start() {
+        // Initialize audio
+        if (this.audioManager) {
+            this.audioManager.playBackgroundMusic();
+        }
+
+        // Load resources
+        resources.load("Tile/icon_tile/spriteFrame", SpriteFrame, (err, asset) => {
+            if (err) {
+                console.error("Failed to load tile background:", err);
+                return;
+            }
+            this.tileBGSprite = asset;
+            this.loadObjectSprites();
+        });
+    }
+
+    private loadObjectSprites() {
         resources.loadDir('Cake', SpriteFrame, (err, assets) => {
             if (err) {
                 console.error('Failed to load assets:', err);
@@ -24,16 +60,16 @@ export class Map extends Component {
             this.generateMap();
             console.log("Map generated successfully");
         });
-
     }
 
     generateMap() {
         this.node.setScale(0.5, 0.5, 1);
+        this.tiles = Array.from({ length: this.rows }, () => Array(this.cols).fill(null));
 
         const startX = -this.cols * this.tileSize / 2;
         const startY = this.rows * this.tileSize / 2;
 
-
+        // Generate sprite pool
         let pool: SpriteFrame[] = [];
         let set: Set<number> = new Set();
         for (let i = 0; i < 15; i++) {
@@ -48,25 +84,26 @@ export class Map extends Component {
             set.add(randomIndex);
         }
 
-        // Trộn mảng để tạo vị trí ngẫu nhiên
         pool = this.shuffleArray(pool);
 
+        // Create tiles
         for (let i = 0; i < this.rows; i++) {
             for (let j = 0; j < this.cols; j++) {
-                const tileNode = new Node(`Tile_${i}_${j}`); // từ (0,0) đến (5,9)
+                const tileNode = new Node(`Tile_${i}_${j}`);
                 tileNode.layer = Layers.Enum.UI_2D;
                 tileNode.setPosition(startX + j * this.tileSize, startY - i * this.tileSize, 0);
 
-                // Thêm sprite vào ô
-                const sprite = tileNode.addComponent(Sprite);
-                sprite.spriteFrame = pool[i * this.cols + j];
+                // Add Tile component
+                const tile = tileNode.addComponent(Tile);
+                if (this.tileBGSprite) {
+                    tile.init(i, j, this.tileBGSprite, pool[i * this.cols + j], this.tileSize);
+                }
 
-                // Thêm kích thước để bắt sự kiện
-                tileNode.addComponent(UITransform).setContentSize(this.tileSize, this.tileSize);
+                this.tiles[i][j] = tile;
 
-                // Bắt sự kiện click
+                // Handle click events
                 tileNode.on(Input.EventType.TOUCH_START, () => {
-                    this.handleTileClick(tileNode);
+                    this.handleTileClick(tile);
                 }, this);
 
                 this.node.addChild(tileNode);
@@ -74,84 +111,96 @@ export class Map extends Component {
         }
     }
 
-    handleTileClick(tile: Node) {
-        const sprite = tile.getComponent(Sprite);
-        if (!sprite || !sprite.spriteFrame) return;
+    handleTileClick(tile: Tile) {
+        if (!tile.getIconSprite()) return;
 
-        // Nếu chưa chọn ô nào
+        // Play click sound
+        if (this.audioManager) {
+            this.audioManager.playClickSound();
+        }
+
+        // First selection
         if (this.firstSelected === null) {
             this.firstSelected = tile;
-            tile.setScale(1.2, 1.2, 1); // highlight
+            tile.select();
             return;
         }
 
-        // Nếu chọn cùng 1 ô thì bỏ qua
+        // Same tile clicked
         if (this.firstSelected === tile) {
-            this.firstSelected.setScale(1, 1, 1);
+            this.firstSelected.deselect();
             this.firstSelected = null;
             return;
         }
 
-        // Nếu chọn ô thứ 2
-        const firstSprite = this.firstSelected.getComponent(Sprite);
-        console.log(firstSprite)
-        if (firstSprite && firstSprite.spriteFrame === sprite.spriteFrame) {
-            if (this.canConnect(this.firstSelected, tile)) {
-                this.firstSelected.destroy();
-                tile.destroy();
+        // Second selection
+        if (this.firstSelected.getIconSprite() === tile.getIconSprite()) {
+            const path = this.canConnect(this.firstSelected, tile);
+            if (path) {
+                // Play match sound
+                if (this.audioManager) {
+                    this.audioManager.playMatchSound();
+                }
+
+                // Draw connection
+                for (let i = 0; i < path.length - 1; i++) {
+                    this.spawnLine(path[i], path[i + 1]);
+                }
+                path.forEach(pos => {
+                    this.spawnStar(pos);
+                });
+
+                // Remove tiles
+                const firstPos = this.firstSelected.getGridPosition();
+                const secondPos = tile.getGridPosition();
+                
+                this.tiles[firstPos.row][firstPos.col] = null;
+                this.tiles[secondPos.row][secondPos.col] = null;
+
+                this.firstSelected.destroyWithAnimation();
+                tile.destroyWithAnimation();
             } else {
-                this.firstSelected.setScale(1,1,1);
+                this.firstSelected.deselect();
             }
         } else {
-            this.firstSelected.setScale(1, 1, 1);
+            this.firstSelected.deselect();
         }
 
-        this.firstSelected = null; // reset chọn
+        this.firstSelected = null;
     }
 
-    shuffleArray<T>(array: T[]): T[] {
-        for (let i = array.length - 1; i > 0; i--) {
-            // Chọn chỉ số ngẫu nhiên từ 0 đến i
-            const j = Math.floor(Math.random() * (i + 1));
-            // Hoán đổi array[i] với array[j]
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    }
-
-    // bfs to check can connect
-    private canConnect(a: Node, b: Node): boolean {
-        // Lấy vị trí 2 điểm
-        const [rowA, colA] = a.name.split("_").slice(1).map(Number);
-        const [rowB, colB] = b.name.split("_").slice(1).map(Number);
+    private canConnect(a: Tile, b: Tile): { r: number, c: number }[] | null {
+        const posA = a.getGridPosition();
+        const posB = b.getGridPosition();
 
         // Grid có viền: 0 = trống, 1 = tile
         const R = this.rows + 2;
         const C = this.cols + 2;
         const grid: number[][] = Array.from({ length: R }, () => Array(C).fill(0));
 
-        this.node.children.forEach(child => {
-            if (child.name.startsWith("Tile")) {
-                const [r, c] = child.name.split("_").slice(1).map(Number);
-                grid[r + 1][c + 1] = 1; // +1 để dịch vào trong (do thêm viền)
+        // Fill grid with existing tiles
+        for (let i = 0; i < this.rows; i++) {
+            for (let j = 0; j < this.cols; j++) {
+                if (this.tiles[i][j] !== null) {
+                    grid[i + 1][j + 1] = 1;
+                }
             }
-        });
+        }
 
-        // điểm bắt đầu & kết thúc (dịch +1 do viền)
-        const sr = rowA + 1, sc = colA + 1;
-        const tr = rowB + 1, tc = colB + 1;
+        // Start and end positions (shift +1 for border)
+        const sr = posA.row + 1, sc = posA.col + 1;
+        const tr = posB.row + 1, tc = posB.col + 1;
         grid[sr][sc] = 0;
         grid[tr][tc] = 0;
 
-        type State = { r: number, c: number, dir: number, turns: number };
+        type State = { r: number, c: number, dir: number, turns: number, path: {r:number,c:number}[] };
         const dirs = [
-            [1, 0],   // xuống
-            [-1, 0],  // lên
-            [0, 1],   // phải
-            [0, -1],  // trái
+            [1, 0],   // down
+            [-1, 0],  // up
+            [0, 1],   // right
+            [0, -1],  // left
         ];
 
-        // bestTurns[r][c][dir] = số rẽ ít nhất để đến (r,c) từ hướng dir
         const INF = 99;
         const bestTurns = Array.from({ length: R }, () =>
             Array.from({ length: C }, () => Array(4).fill(INF))
@@ -159,10 +208,10 @@ export class Map extends Component {
 
         const queue: State[] = [];
 
-        // từ điểm bắt đầu, thử đi theo 4 hướng
+        // Try all 4 directions from start
         for (let d = 0; d < 4; d++) {
             bestTurns[sr][sc][d] = 0;
-            queue.push({ r: sr, c: sc, dir: d, turns: 0 });
+            queue.push({ r: sr, c: sc, dir: d, turns: 0, path: [{r: sr, c: sc}] });
         }
 
         while (queue.length > 0) {
@@ -171,18 +220,20 @@ export class Map extends Component {
             const [dr, dc] = dirs[cur.dir];
             let nr = cur.r + dr;
             let nc = cur.c + dc;
+            let pathCopy = [...cur.path];
 
             while (nr >= 0 && nr < R && nc >= 0 && nc < C && grid[nr][nc] === 0) {
-                if (nr === tr && nc === tc) return true; // đến đích
+                pathCopy = [...pathCopy, {r: nr, c: nc}];
+                if (nr === tr && nc === tc) return pathCopy;
 
                 if (bestTurns[nr][nc][cur.dir] > cur.turns) {
                     bestTurns[nr][nc][cur.dir] = cur.turns;
-                    // từ ô này, thử tiếp tục theo 4 hướng khác
+                    
                     for (let nd = 0; nd < 4; nd++) {
                         const newTurns = cur.dir === nd ? cur.turns : cur.turns + 1;
                         if (newTurns <= 2 && bestTurns[nr][nc][nd] > newTurns) {
                             bestTurns[nr][nc][nd] = newTurns;
-                            queue.push({ r: nr, c: nc, dir: nd, turns: newTurns });
+                            queue.push({ r: nr, c: nc, dir: nd, turns: newTurns, path: [...pathCopy] });
                         }
                     }
                 }
@@ -192,7 +243,70 @@ export class Map extends Component {
             }
         }
 
-        return false;
+        return null;
     }
 
+    private spawnStar(gridPos: { r: number, c: number }) {
+        if (!this.starPrefab || !this.starNode) return;
+
+        const star = instantiate(this.starPrefab);
+        star.layer = Layers.Enum.UI_2D;
+
+        const x = -this.cols * this.tileSize / 2 + (gridPos.c - 1) * this.tileSize;
+        const y = this.rows * this.tileSize / 2 - (gridPos.r - 1) * this.tileSize;
+
+        star.setPosition(new Vec3(x, y, 0));
+        this.starNode.addChild(star);
+
+        tween(star)
+            .to(0.2, { scale: new Vec3(1.5, 1.5, 1) })
+            .to(0.3, { scale: new Vec3(0, 0, 1) })
+            .call(() => star.destroy())
+            .start();
+    }
+
+    private spawnLine(from: { r: number, c: number }, to: { r: number, c: number }) {
+        if (!this.linePrefab || !this.lineNode) return;
+
+        const line = instantiate(this.linePrefab);
+        line.layer = Layers.Enum.UI_2D;
+
+        const x1 = -this.cols * this.tileSize / 2 + (from.c - 1) * this.tileSize;
+        const y1 = this.rows * this.tileSize / 2 - (from.r - 1) * this.tileSize;
+        const x2 = -this.cols * this.tileSize / 2 + (to.c - 1) * this.tileSize;
+        const y2 = this.rows * this.tileSize / 2 - (to.r - 1) * this.tileSize;
+
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+        line.setPosition(new Vec3(midX, midY, 0));
+
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const length = Math.sqrt(dx * dx + dy * dy);
+
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        line.setRotationFromEuler(0, 0, angle);
+
+        const uiTrans = line.getComponent(UITransform);
+        if (uiTrans) {
+            uiTrans.setContentSize(length, uiTrans.contentSize.height);
+        }
+
+        this.lineNode.addChild(line);
+
+        const opacity = line.getComponent(UIOpacity) || line.addComponent(UIOpacity);
+        opacity.opacity = 255;
+        tween(opacity)
+            .to(0.5, { opacity: 0 })
+            .call(() => line.destroy())
+            .start();
+    }
+
+    shuffleArray<T>(array: T[]): T[] {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
 }
