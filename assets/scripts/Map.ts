@@ -36,7 +36,7 @@ export class Map extends Component {
     matchEffectPrefab: Prefab | null = null;
 
     private rows: number = 8;
-    private cols: number = 12;
+    private cols: number = 14;
     private tileSize: number = 150;
     private firstSelected: Tile | null = null;
     private tiles: Tile[][] = [];
@@ -55,11 +55,21 @@ export class Map extends Component {
             }
             this.tileBGSprite = asset;
             this.loadObjectSprites();
-        });
+        }); 
     }
 
+    private theme = {
+        cake: 'Theme/1.Cake',
+        food: 'Theme/2.Food',
+        fruits: 'Theme/3.Fruits',
+        candy: 'Theme/4.Candy',
+        catDog: 'Theme/5.Cat&dog',
+        sport: 'Theme/6.Sport',
+        girlClothes: 'Theme/7.Girl clothes',
+    };
+
     private loadObjectSprites() {
-        resources.loadDir('Cake', SpriteFrame, (err, assets) => {
+        resources.loadDir(this.theme.cake, SpriteFrame, (err, assets) => {
             if (err) {
                 console.error('Failed to load assets:', err);
                 return;
@@ -185,6 +195,15 @@ export class Map extends Component {
                 this.tiles[secondPos.row][secondPos.col] = null;
                 this.firstSelected.destroyWithAnimation();
                 tile.destroyWithAnimation();
+
+                if (!this.hasValidMoves()) {
+                    if(this.isWin()) {
+                        this.win();
+                    }
+                    else{
+                        this.showGameOverMessage();
+                    }
+                }
             } else {
                 this.firstSelected.deselect();
             }
@@ -193,6 +212,73 @@ export class Map extends Component {
         }
 
         this.firstSelected = null;
+    }
+
+    private hasValidMoves(): boolean {
+        // Check all pairs of tiles with the same icon
+        for (let i1 = 0; i1 < this.rows; i1++) {
+            for (let j1 = 0; j1 < this.cols; j1++) {
+                const tile1 = this.tiles[i1][j1];
+                if (!tile1 || !tile1.getIconSprite()) continue;
+
+                for (let i2 = i1; i2 < this.rows; i2++) {
+                    for (let j2 = i2 === i1 ? j1 + 1 : 0; j2 < this.cols; j2++) {
+                        const tile2 = this.tiles[i2][j2];
+                        if (!tile2 || !tile2.getIconSprite()) continue;
+
+                        if (tile1.getIconSprite() === tile2.getIconSprite()) {
+                            if (this.canConnect(tile1, tile2)) {
+                                return true; // Found a valid move
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false; // No valid moves found
+    }
+
+    private showGameOverMessage() {
+        console.log("Game Over! No valid moves left.");
+    }
+
+    private isWin() {
+        for (let i = 0; i < this.rows; i++) {
+            for (let j = 0; j < this.cols; j++) {
+                if (this.tiles[i][j] !== null) {
+                    return false; // Still tiles left
+                }
+            }
+        }
+        return true; // All tiles cleared
+    }
+
+    private win() {
+        console.log("You win!");
+    }
+
+    private clearMap() {
+        // Remove all existing tile nodes
+        for (let i = 0; i < this.rows; i++) {
+            for (let j = 0; j < this.cols; j++) {
+                if (this.tiles[i][j]) {
+                    this.tiles[i][j].node.destroy();
+                    this.tiles[i][j] = null;
+                }
+            }
+        }
+        // Clear any remaining lines, stars, or effects
+        if (this.lineNode) this.lineNode.removeAllChildren();
+        if (this.starNode) this.starNode.removeAllChildren();
+        if (this.matchEffectNode) this.matchEffectNode.removeAllChildren();
+        // Reset firstSelected
+        this.firstSelected = null;
+    }
+
+    resetMap() {
+        this.clearMap();
+        this.generateMap();
+        console.log("Map reset successfully");
     }
 
     private canConnect(a: Tile, b: Tile): { r: number, c: number }[] | null {

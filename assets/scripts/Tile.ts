@@ -47,6 +47,7 @@ export class Tile extends Component {
         this.iconNode = new Node(`Icon_${this.row}_${this.col}`);
         this.iconNode.layer = Layers.Enum.UI_2D;
         this.iconNode.setPosition(0, 10, 0.5);
+        // this.iconNode.setScale(0.94, 0.94, 1);
         
         const iconSprite = this.iconNode.addComponent(Sprite);
         if (this.iconSprite) {
