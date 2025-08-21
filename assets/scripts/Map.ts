@@ -1,4 +1,4 @@
-import { _decorator, Component, Layers, Node, SpriteFrame, Input, resources, Prefab, instantiate, Vec3, tween, UIOpacity, UITransform } from 'cc';
+import { _decorator, Component, Layers, Node, SpriteFrame, Input, resources, Prefab, instantiate, Vec3, tween, UIOpacity, UITransform, ParticleSystem2D, ParticleSystem } from 'cc';
 import { Tile } from './Tile';
 import { AudioManager } from './AudioManager';
 
@@ -18,17 +18,25 @@ export class Map extends Component {
     @property(Prefab)
     linePrefab: Prefab | null = null;
 
+    @property(Prefab)
+    skeletonPrefab: Prefab | null = null;
+
     @property(Node)
     lineNode: Node | null = null;
 
     @property(Node)
     starNode: Node | null = null;
 
+    @property(Node)
+    matchEffectNode: Node | null = null;
     @property(AudioManager)
     audioManager: AudioManager | null = null;
 
-    private rows: number = 6;
-    private cols: number = 10;
+    @property(Prefab)
+    matchEffectPrefab: Prefab | null = null;
+
+    private rows: number = 8;
+    private cols: number = 12;
     private tileSize: number = 150;
     private firstSelected: Tile | null = null;
     private tiles: Tile[][] = [];
@@ -63,7 +71,7 @@ export class Map extends Component {
     }
 
     generateMap() {
-        this.node.setScale(0.5, 0.5, 1);
+        // this.node.setScale(0.5, 0.5, 1);
         this.tiles = Array.from({ length: this.rows }, () => Array(this.cols).fill(null));
 
         const startX = -this.cols * this.tileSize / 2;
@@ -72,7 +80,8 @@ export class Map extends Component {
         // Generate sprite pool
         let pool: SpriteFrame[] = [];
         let set: Set<number> = new Set();
-        for (let i = 0; i < 15; i++) {
+        const numOfSprites = this.rows*this.cols/4;
+        for (let i = 0; i < numOfSprites; i++) {
             let randomIndex = Math.floor(Math.random() * this.objectSprites.length);
             while (set.has(randomIndex)) {
                 randomIndex = Math.floor(Math.random() * this.objectSprites.length);
@@ -97,6 +106,20 @@ export class Map extends Component {
                 const tile = tileNode.addComponent(Tile);
                 if (this.tileBGSprite) {
                     tile.init(i, j, this.tileBGSprite, pool[i * this.cols + j], this.tileSize);
+                }
+
+                // Add skeleton prefab to tile
+                if (this.skeletonPrefab) {
+                    const skeleton = instantiate(this.skeletonPrefab);
+                    skeleton.setPosition(0, 0, 0);
+                    const skeletonTransform = skeleton.getComponent(UITransform);
+                    const scaleX = this.tileSize / skeletonTransform.contentSize.width * 1.10;
+                    const scaleY = this.tileSize / skeletonTransform.contentSize.height * 1.10;
+                    skeleton.setScale(scaleX, scaleY, 1);
+                    // skeleton.setScale(1.75, 1.75, 1);
+                    skeleton.active = false; // Initially inactive
+                    tileNode.addChild(skeleton);
+                    tile.skeletonNode = skeleton;
                 }
 
                 this.tiles[i][j] = tile;
@@ -146,17 +169,20 @@ export class Map extends Component {
                 for (let i = 0; i < path.length - 1; i++) {
                     this.spawnLine(path[i], path[i + 1]);
                 }
+
                 path.forEach(pos => {
                     this.spawnStar(pos);
                 });
 
+                // Spawn match effects
+                this.spawnMatchEffect(path[0]);
+                this.spawnMatchEffect(path[path.length - 1]);
                 // Remove tiles
                 const firstPos = this.firstSelected.getGridPosition();
                 const secondPos = tile.getGridPosition();
-                
+
                 this.tiles[firstPos.row][firstPos.col] = null;
                 this.tiles[secondPos.row][secondPos.col] = null;
-
                 this.firstSelected.destroyWithAnimation();
                 tile.destroyWithAnimation();
             } else {
@@ -246,6 +272,28 @@ export class Map extends Component {
         return null;
     }
 
+    private spawnMatchEffect(gridPos: { r: number, c: number }) {
+        if (!this.matchEffectPrefab || !this.matchEffectNode) return;
+
+        const effect = instantiate(this.matchEffectPrefab);
+        effect.layer = Layers.Enum.UI_2D;
+
+        const x = -this.cols * this.tileSize / 2 + (gridPos.c - 1) * this.tileSize;
+        const y = this.rows * this.tileSize / 2 - (gridPos.r - 1) * this.tileSize;
+        effect.setPosition(new Vec3(x, y, 1)); 
+        this.matchEffectNode.addChild(effect);
+        const ps = effect.getComponent(ParticleSystem);
+        if (ps) {
+            (ps as ParticleSystem).play();
+        }
+
+        setTimeout(() => {
+            effect.destroy();
+        }, 2000);
+        console.log("Spawned eff at:", gridPos);
+        return true;
+    }
+
     private spawnStar(gridPos: { r: number, c: number }) {
         if (!this.starPrefab || !this.starNode) return;
 
@@ -255,14 +303,14 @@ export class Map extends Component {
         const x = -this.cols * this.tileSize / 2 + (gridPos.c - 1) * this.tileSize;
         const y = this.rows * this.tileSize / 2 - (gridPos.r - 1) * this.tileSize;
 
-        star.setPosition(new Vec3(x, y, 0));
+        star.setPosition(new Vec3(x, y, 10));
         this.starNode.addChild(star);
-
         tween(star)
             .to(0.2, { scale: new Vec3(1.5, 1.5, 1) })
             .to(0.3, { scale: new Vec3(0, 0, 1) })
             .call(() => star.destroy())
             .start();
+        console.log("Spawned star at:", gridPos);
     }
 
     private spawnLine(from: { r: number, c: number }, to: { r: number, c: number }) {

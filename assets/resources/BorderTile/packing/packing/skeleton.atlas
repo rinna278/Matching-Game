@@ -1,0 +1,111 @@
+
+skeleton.png
+size: 848,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+Fx_Select2_00000
+  rotate: false
+  xy: 2, 340
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00001
+  rotate: false
+  xy: 2, 171
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00002
+  rotate: false
+  xy: 171, 340
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00003
+  rotate: false
+  xy: 2, 2
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00004
+  rotate: false
+  xy: 171, 171
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00005
+  rotate: false
+  xy: 340, 340
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00006
+  rotate: false
+  xy: 171, 2
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00007
+  rotate: false
+  xy: 340, 171
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00008
+  rotate: false
+  xy: 509, 340
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00009
+  rotate: false
+  xy: 340, 2
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00010
+  rotate: false
+  xy: 509, 171
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00011
+  rotate: false
+  xy: 678, 340
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00012
+  rotate: false
+  xy: 509, 2
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00013
+  rotate: false
+  xy: 678, 171
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1
+Fx_Select2_00014
+  rotate: false
+  xy: 678, 2
+  size: 167, 167
+  orig: 167, 167
+  offset: 0, 0
+  index: -1

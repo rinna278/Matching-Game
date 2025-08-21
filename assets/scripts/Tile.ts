@@ -15,8 +15,9 @@ export class Tile extends Component {
     private col: number = 0;
     private tileSize: number = 150;
     private isSelected: boolean = false;
+    public skeletonNode: Node | null = null;
 
-    init(row: number, col: number, bgSprite: SpriteFrame, iconSprite: SpriteFrame, tileSize: number = 150) {
+    init(row: number, col: number, bgSprite: SpriteFrame, iconSprite: SpriteFrame, tileSize: number) {
         this.row = row;
         this.col = col;
         this.bgSprite = bgSprite;
@@ -45,14 +46,19 @@ export class Tile extends Component {
     private createIcon() {
         this.iconNode = new Node(`Icon_${this.row}_${this.col}`);
         this.iconNode.layer = Layers.Enum.UI_2D;
-        this.iconNode.setPosition(0, 0, 1);
+        this.iconNode.setPosition(0, 10, 0.5);
         
         const iconSprite = this.iconNode.addComponent(Sprite);
         if (this.iconSprite) {
             iconSprite.spriteFrame = this.iconSprite;
+            iconSprite.trim = false;
+
+            iconSprite.sizeMode = Sprite.SizeMode.RAW;
         }
-        
-        this.iconNode.addComponent(UITransform).setContentSize(this.tileSize * 0.8, this.tileSize * 0.8);
+        const iconTransform = this.iconNode.addComponent(UITransform);
+        // this.iconNode.setScale(0.8, 0.8, 1);
+        iconTransform.setContentSize(this.tileSize, this.tileSize);
+        iconTransform.anchorPoint.set(0.5, 0.5);
         this.node.addChild(this.iconNode);
     }
 
@@ -74,12 +80,27 @@ export class Tile extends Component {
 
     select() {
         this.isSelected = true;
-        this.node.setScale(1.2, 1.2, 1);
+        // this.node.setScale(1.2, 1.2, 1);
+        this.border();
     }
 
     deselect() {
         this.isSelected = false;
-        this.node.setScale(1, 1, 1);
+        // this.node.setScale(1, 1, 1);
+        this.border();
+    }
+
+    border(){
+        if(this.isSelected) {
+            if (this.skeletonNode) {
+                this.skeletonNode.active = true;
+            }
+        } 
+        else{
+            if (this.skeletonNode) {
+                this.skeletonNode.active = false;
+            }
+        }
     }
 
     getSelected(): boolean {
@@ -87,8 +108,9 @@ export class Tile extends Component {
     }
 
     destroyWithAnimation(callback?: () => void) {
+        this.deselect();
         tween(this.node)
-            .to(0.2, { scale: new Vec3(0, 0, 1) })
+            .to(0.5, { scale: new Vec3(0, 0, 1) })
             .call(() => {
                 if (callback) callback();
                 this.node.destroy();
