@@ -1,4 +1,4 @@
-import { _decorator, Component, Layers, Node, SpriteFrame, Input, resources, Prefab, instantiate, Vec3, tween, UIOpacity, UITransform, ParticleSystem2D, ParticleSystem } from 'cc';
+import { _decorator, Component, Layers, Node, SpriteFrame, Input, resources, Prefab, instantiate, Vec3, tween, UIOpacity, UITransform, ParticleSystem2D, ParticleSystem, Sprite, JsonAsset } from 'cc';
 import { Tile } from './Tile';
 import { AudioManager } from './AudioManager';
 
@@ -29,59 +29,102 @@ export class Map extends Component {
 
     @property(Node)
     matchEffectNode: Node | null = null;
-    @property(AudioManager)
-    audioManager: AudioManager | null = null;
 
     @property(Prefab)
     matchEffectPrefab: Prefab | null = null;
+
+    @property(AudioManager)
+    audioManager: AudioManager | null = null;
+
 
     private rows: number = 8;
     private cols: number = 14;
     private tileSize: number = 150;
     private firstSelected: Tile | null = null;
     private tiles: Tile[][] = [];
+    private themeID: number = 1;
+    private lv: number = 1;
 
+    private getThemePath(id: number): string {
+        switch (id) {
+            case 1: return 'Theme/1.Cake';
+            case 2: return 'Theme/2.Food';
+            case 3: return 'Theme/3.Fruits';
+            case 4: return 'Theme/4.Candy';
+            case 5: return 'Theme/5.Cat&dog';
+            case 6: return 'Theme/6.Sport';
+            case 7: return 'Theme/7.Girl clothes';
+            default: return 'Theme/1.Cake'; // fallback
+        }
+    }
+
+    private getLVPath(lv: number): string {
+        return `Level/lv${lv}`;
+    }
+
+    // private getBGMPath(id: number): string {
+    //     switch (id) {
+    //         case 1: return 'Sound/Netherland';
+    //         case 2: return 'Sound/Undersea';
+    //         // case 3: return 'Audio/BGM/bgm3';
+    //     }
+    // }
     start() {
         // Initialize audio
         if (this.audioManager) {
             this.audioManager.playBackgroundMusic();
         }
 
-        // Load resources
-        resources.load("Tile/icon_tile/spriteFrame", SpriteFrame, (err, asset) => {
-            if (err) {
-                console.error("Failed to load tile background:", err);
-                return;
-            }
-            this.tileBGSprite = asset;
-            this.loadObjectSprites();
-        }); 
+        this.loadLevel(this.lv);
+
     }
 
-    private theme = {
-        cake: 'Theme/1.Cake',
-        food: 'Theme/2.Food',
-        fruits: 'Theme/3.Fruits',
-        candy: 'Theme/4.Candy',
-        catDog: 'Theme/5.Cat&dog',
-        sport: 'Theme/6.Sport',
-        girlClothes: 'Theme/7.Girl clothes',
-    };
-
-    private loadObjectSprites() {
-        resources.loadDir(this.theme.cake, SpriteFrame, (err, assets) => {
+    private loadLevel(lv: number) {
+        resources.load(this.getLVPath(lv), JsonAsset, (err, asset) => {
             if (err) {
-                console.error('Failed to load assets:', err);
+                console.error("Failed to load map config:", err);
                 return;
             }
-            this.objectSprites = assets;
-            this.generateMap();
-            console.log("Map generated successfully");
+
+            const config = asset.json;
+            this.rows = config.rows;
+            this.cols = config.cols;
+            this.tileSize = config.tileSize;
+            this.themeID = config.themeID;
+
+            // Load tile background
+            const tileBGPath = "Tile/icon_tile/spriteFrame";
+            resources.load(tileBGPath, SpriteFrame, (err, tileAsset) => {
+                if (err) {
+                    console.error("Failed to load tile background:", err);
+                    return;
+                }
+                this.tileBGSprite = tileAsset;
+
+                // Load theme sprites
+                const themePath = this.getThemePath(this.themeID);
+                resources.loadDir(themePath, SpriteFrame, (err, assets) => {
+                    if (err) {
+                        console.error("Failed to load theme sprites:", err);
+                        return;
+                    }
+                    this.objectSprites = assets;
+
+                    this.generateMap();
+                    console.log(`Map generated with theme: ${themePath}`);
+                });
+            });
         });
+    }
+    private nextLevel() {
+        this.lv++;
+        this.clearMap();
+        this.loadLevel(this.lv);
     }
 
     generateMap() {
-        // this.node.setScale(0.5, 0.5, 1);
+        const spawnPos = new Vec3(-700, 800, 0);
+        console.log(`Current level is: ${this.lv}`);
         this.tiles = Array.from({ length: this.rows }, () => Array(this.cols).fill(null));
 
         const startX = -this.cols * this.tileSize / 2;
@@ -90,7 +133,7 @@ export class Map extends Component {
         // Generate sprite pool
         let pool: SpriteFrame[] = [];
         let set: Set<number> = new Set();
-        const numOfSprites = this.rows*this.cols/4;
+        const numOfSprites = this.rows * this.cols / 4;
         for (let i = 0; i < numOfSprites; i++) {
             let randomIndex = Math.floor(Math.random() * this.objectSprites.length);
             while (set.has(randomIndex)) {
@@ -110,8 +153,12 @@ export class Map extends Component {
             for (let j = 0; j < this.cols; j++) {
                 const tileNode = new Node(`Tile_${i}_${j}`);
                 tileNode.layer = Layers.Enum.UI_2D;
-                tileNode.setPosition(startX + j * this.tileSize, startY - i * this.tileSize, 0);
+                const finalX = startX + j * this.tileSize;
+                const finalY = startY - i * this.tileSize;
+                const finalPos = new Vec3(finalX, finalY, 0);
 
+                tileNode.setPosition(spawnPos);
+                tileNode.setScale(0.01, 0.01, 1);
                 // Add Tile component
                 const tile = tileNode.addComponent(Tile);
                 if (this.tileBGSprite) {
@@ -140,11 +187,16 @@ export class Map extends Component {
                 }, this);
 
                 this.node.addChild(tileNode);
-            }
+                const delay = (i * this.cols + j) * 0.02; // delay theo index cho đẹp
+                tween(tileNode)
+                    .delay(delay)
+                    .to(1, { position: finalPos, scale: new Vec3(1, 1, 1) }, { easing: "backOut" })
+                    .start();
+                    }
         }
     }
 
-    handleTileClick(tile: Tile) {
+    async handleTileClick(tile: Tile) {
         if (!tile.getIconSprite()) return;
 
         // Play click sound
@@ -180,8 +232,9 @@ export class Map extends Component {
                     this.spawnLine(path[i], path[i + 1]);
                 }
 
-                path.forEach(pos => {
-                    this.spawnStar(pos);
+                await path.forEach((pos, index) => {
+                    this.spawnStar(pos, index);
+                    console.log(index)
                 });
 
                 // Spawn match effects
@@ -197,13 +250,15 @@ export class Map extends Component {
                 tile.destroyWithAnimation();
 
                 if (!this.hasValidMoves()) {
-                    if(this.isWin()) {
+                    if (this.isWin()) {
                         this.win();
                     }
-                    else{
+                    else {
                         this.showGameOverMessage();
+                        this.reshuffleMap();
                     }
                 }
+
             } else {
                 this.firstSelected.deselect();
             }
@@ -255,6 +310,7 @@ export class Map extends Component {
 
     private win() {
         console.log("You win!");
+        this.nextLevel();
     }
 
     private clearMap() {
@@ -268,9 +324,9 @@ export class Map extends Component {
             }
         }
         // Clear any remaining lines, stars, or effects
-        if (this.lineNode) this.lineNode.removeAllChildren();
-        if (this.starNode) this.starNode.removeAllChildren();
-        if (this.matchEffectNode) this.matchEffectNode.removeAllChildren();
+        // if (this.lineNode) this.lineNode.removeAllChildren();
+        // if (this.starNode) this.starNode.removeAllChildren();
+        // if (this.matchEffectNode) this.matchEffectNode.removeAllChildren();
         // Reset firstSelected
         this.firstSelected = null;
     }
@@ -279,6 +335,66 @@ export class Map extends Component {
         this.clearMap();
         this.generateMap();
         console.log("Map reset successfully");
+    }
+
+    private async reshuffleMap() {
+        // Lấy tất cả tile còn lại (không null)
+        const remainingTiles: Tile[] = [];
+        for (let i = 0; i < this.rows; i++) {
+            for (let j = 0; j < this.cols; j++) {
+                if (this.tiles[i][j] !== null) {
+                    remainingTiles.push(this.tiles[i][j]);
+                }
+            }
+        }
+
+        const promises = remainingTiles.map(tile => {
+            return new Promise<void>(resolve => {
+                tween(tile.node)
+                    .to(0.3, { scale: new Vec3(0, 0, 1) }, { easing: "backIn" })
+                    .call(() => resolve())
+                    .start();
+            });
+        });
+        await Promise.all(promises);
+
+
+        // Lấy sprite từ các tile còn lại
+        const spriteList: SpriteFrame[] = remainingTiles.map(tile => tile.getIconSprite()!);
+
+        // Shuffle cho tới khi có ít nhất 1 nước đi
+        let valid = false;
+        let maxTry = 50; // tránh vòng lặp vô hạn
+        while (!valid && maxTry > 0) {
+            maxTry--;
+            this.shuffleArray(spriteList);
+
+            // Gán lại sprite cho các tile
+            let index = 0;
+            for (let i = 0; i < this.rows; i++) {
+                for (let j = 0; j < this.cols; j++) {
+                    const tile = this.tiles[i][j];
+                    if (tile) {
+                        tile.init(i, j, this.tileBGSprite, spriteList[index++], this.tileSize);
+                        console.log("init successfully")
+                    }
+                }
+            }
+
+            if (this.hasValidMoves()) {
+                valid = true;
+            }
+        }
+
+        for (let tile of remainingTiles) {
+            tween(tile.node)
+                .to(0.3, { scale: new Vec3(1, 1, 1) }, { easing: "backOut" })
+                .start();
+        }
+        if (maxTry <= 0)
+            console.error("Failed to reshuffle map, no valid moves found after maximum attempts.");
+        else
+            console.log("Reshuffled map successfully, valid moves available.");
     }
 
     private canConnect(a: Tile, b: Tile): { r: number, c: number }[] | null {
@@ -305,7 +421,7 @@ export class Map extends Component {
         grid[sr][sc] = 0;
         grid[tr][tc] = 0;
 
-        type State = { r: number, c: number, dir: number, turns: number, path: {r:number,c:number}[] };
+        type State = { r: number, c: number, dir: number, turns: number, path: { r: number, c: number }[] };
         const dirs = [
             [1, 0],   // down
             [-1, 0],  // up
@@ -323,7 +439,7 @@ export class Map extends Component {
         // Try all 4 directions from start
         for (let d = 0; d < 4; d++) {
             bestTurns[sr][sc][d] = 0;
-            queue.push({ r: sr, c: sc, dir: d, turns: 0, path: [{r: sr, c: sc}] });
+            queue.push({ r: sr, c: sc, dir: d, turns: 0, path: [{ r: sr, c: sc }] });
         }
 
         while (queue.length > 0) {
@@ -335,12 +451,12 @@ export class Map extends Component {
             let pathCopy = [...cur.path];
 
             while (nr >= 0 && nr < R && nc >= 0 && nc < C && grid[nr][nc] === 0) {
-                pathCopy = [...pathCopy, {r: nr, c: nc}];
+                pathCopy = [...pathCopy, { r: nr, c: nc }];
                 if (nr === tr && nc === tc) return pathCopy;
 
                 if (bestTurns[nr][nc][cur.dir] > cur.turns) {
                     bestTurns[nr][nc][cur.dir] = cur.turns;
-                    
+
                     for (let nd = 0; nd < 4; nd++) {
                         const newTurns = cur.dir === nd ? cur.turns : cur.turns + 1;
                         if (newTurns <= 2 && bestTurns[nr][nc][nd] > newTurns) {
@@ -366,7 +482,7 @@ export class Map extends Component {
 
         const x = -this.cols * this.tileSize / 2 + (gridPos.c - 1) * this.tileSize;
         const y = this.rows * this.tileSize / 2 - (gridPos.r - 1) * this.tileSize;
-        effect.setPosition(new Vec3(x, y, 1)); 
+        effect.setPosition(new Vec3(x, y, 1));
         this.matchEffectNode.addChild(effect);
         const ps = effect.getComponent(ParticleSystem);
         if (ps) {
@@ -380,24 +496,37 @@ export class Map extends Component {
         return true;
     }
 
-    private spawnStar(gridPos: { r: number, c: number }) {
-        if (!this.starPrefab || !this.starNode) return;
+    private spawnStar(gridPos: { r: number, c: number }, index: number = 0): Promise<void> {
+        return new Promise<void>((resolve) => {
+            if (!this.starPrefab || !this.starNode) {
+                console.error("Thiếu star prefab hoặc star node!");
+                resolve();
+                return;
+            }
 
-        const star = instantiate(this.starPrefab);
-        star.layer = Layers.Enum.UI_2D;
+            const star = instantiate(this.starPrefab);
+            star.layer = Layers.Enum.UI_2D;
 
-        const x = -this.cols * this.tileSize / 2 + (gridPos.c - 1) * this.tileSize;
-        const y = this.rows * this.tileSize / 2 - (gridPos.r - 1) * this.tileSize;
+            const x = -this.cols * this.tileSize / 2 + (gridPos.c - 1) * this.tileSize;
+            const y = this.rows * this.tileSize / 2 - (gridPos.r - 1) * this.tileSize;
 
-        star.setPosition(new Vec3(x, y, 10));
-        this.starNode.addChild(star);
-        tween(star)
-            .to(0.2, { scale: new Vec3(1.5, 1.5, 1) })
-            .to(0.3, { scale: new Vec3(0, 0, 1) })
-            .call(() => star.destroy())
-            .start();
-        console.log("Spawned star at:", gridPos);
-    }
+            star.setPosition(new Vec3(x, y, 10));
+            const targetPos = new Vec3(600, 700, 0);
+            this.starNode.addChild(star);
+
+            tween(star)
+                .to(0.2, { scale: new Vec3(1, 1, 1) })
+                .delay(0.3+ index * 0.02)
+                .to(0.6, { position: targetPos})
+                .delay(0.1)
+                .call(() => {
+                    star.destroy();
+                    resolve();
+                })
+                .start();
+            console.log("Spawned star at:", gridPos);
+    });
+}
 
     private spawnLine(from: { r: number, c: number }, to: { r: number, c: number }) {
         if (!this.linePrefab || !this.lineNode) return;

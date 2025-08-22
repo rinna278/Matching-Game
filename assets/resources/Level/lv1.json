@@ -1,3 +1,7 @@
 {
-    
+    "rows": 4,
+    "cols": 2,
+    "tileSize": 200,
+    "themeID": 1,
+    "bgmID": 1
 }
