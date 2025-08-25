@@ -73,6 +73,10 @@ export class Map extends Component {
     }
   }
 
+  getLevel() {
+    return this.lv;
+  }
+
   private getThemePath(id: number): string {
     switch (id) {
       case 1:
@@ -160,7 +164,7 @@ export class Map extends Component {
 
   generateMap() {
     this.levelUI?.setLevel(this.lv);
-    const spawnPos = new Vec3(-700, 800, 0);
+    const spawnPos = new Vec3(0, 0, 0);
     console.log(`Current level is: ${this.lv}`);
     this.tiles = Array.from({ length: this.rows }, () =>
       Array(this.cols).fill(null)
