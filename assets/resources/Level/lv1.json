@@ -1,7 +1,7 @@
 {
-    "rows": 4,
-    "cols": 2,
-    "tileSize": 200,
+    "rows": 2,
+    "cols": 4,
+    "tileSize": 150 ,
     "themeID": 1,
     "bgmID": 1
 }
