@@ -16,6 +16,7 @@ import {
   ParticleSystem,
   Sprite,
   JsonAsset,
+  view,
 } from "cc";
 import { Tile } from "./Tile";
 import { AudioManager } from "./AudioManager";
@@ -66,6 +67,8 @@ export class Map extends Component {
   private tiles: Tile[][] = [];
   private themeID: number = 1;
   private lv: number = 1;
+  private width :number = 0;
+  private height :number = 0;
 
   @property(LevelUI)
   levelUI: LevelUI | null = null;
@@ -117,11 +120,14 @@ export class Map extends Component {
   //     }
   // }
   start() {
+    // Get screen size
+    this.width = view.getVisibleSize().width;
+    this.height = view.getVisibleSize().height;
     // Initialize audio
     if (this.audioManager) {
       this.audioManager.playBackgroundMusic();
     }
-
+    console.log("Screen size:", this.width, this.height);
     this.loadLevel(this.lv);
     this.levelUI?.setLevel(this.lv);
   }
@@ -136,7 +142,7 @@ export class Map extends Component {
       const config = asset.json;
       this.rows = config.rows;
       this.cols = config.cols;
-      this.tileSize = config.tileSize;
+      // this.tileSize = config.tileSize;
       this.themeID = config.themeID;
 
       // Load tile background
@@ -170,6 +176,7 @@ export class Map extends Component {
   }
 
   generateMap() {
+    this.tileSize = Math.min(this.width/(this.cols+1.5)*2, this.height/(this.rows+1.5)*2);
     this.levelUI?.setLevel(this.lv);
     const spawnPos = new Vec3(0, 0, 0);
     console.log(`Current level is: ${this.lv}`);
@@ -236,6 +243,7 @@ export class Map extends Component {
           skeleton.setScale(scaleX, scaleY, 1);
           // skeleton.setScale(1.75, 1.75, 1);
           skeleton.active = false; // Initially inactive
+          
           tileNode.addChild(skeleton);
           tile.skeletonNode = skeleton;
         }
@@ -409,6 +417,7 @@ export class Map extends Component {
 
   private async reshuffleMap() {
     // Lấy tất cả tile còn lại (không null)
+    this.clearHints();
     const remainingTiles: Tile[] = [];
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
@@ -453,6 +462,12 @@ export class Map extends Component {
               spriteList[index++],
               this.tileSize
             );
+            if (tile.skeletonNode) {
+              const skeletonNode = tile.skeletonNode;
+              skeletonNode.removeFromParent();
+              tile.node.addChild(skeletonNode); // Add lại để đúng thứ tự skeleton
+            }
+            this.firstSelected = null; //bỏ chọn nút đó sau khi reshuffle
             console.log("init successfully");
           }
         }
@@ -627,8 +642,8 @@ export class Map extends Component {
         .delay(0.1)
         .call(() => {
           this.scoreManager?.addScore();
-          star.destroy();
           resolve();
+          star.destroy();
         })
         .start();
       
@@ -659,7 +674,7 @@ export class Map extends Component {
       const y = startY - (gridPos.r - 1) * this.tileSize;
 
       star.setPosition(new Vec3(x, y, 10));
-      this.starNode.addChild(star);
+      this.hintNode.addChild(star);
 
       //increase score when star reaches target
       tween(star)
@@ -804,12 +819,12 @@ export class Map extends Component {
 
   clearHints() {
     // clear line hint
-    if (this.lineNode) {
+    if (this.hintNode) {
       this.hintNode.removeAllChildren();
     }
 
-    if (this.starNode) {
-      this.starNode.removeAllChildren();
+    if (this.hintNode) {
+      this.hintNode.removeAllChildren();
     }
 
     // clear highlight trên tile

@@ -44,9 +44,13 @@ export class Tile extends Component {
     this.createBackground();
     this.createIcon();
     this.setupTransform();
+    this.deselect();
   }
 
   private createBackground() {
+    if(this.bgNode) {
+      this.bgNode.destroy();
+    }
     this.bgNode = new Node(`TileBG_${this.row}_${this.col}`);
     this.bgNode.layer = Layers.Enum.UI_2D;
     this.bgNode.setPosition(0, 0, 0);
@@ -63,6 +67,9 @@ export class Tile extends Component {
   }
 
   private createIcon() {
+    if(this.iconNode) {
+      this.iconNode.destroy();
+    }
     this.iconNode = new Node(`Icon_${this.row}_${this.col}`);
     this.iconNode.layer = Layers.Enum.UI_2D;
     this.iconNode.setPosition(0, 10, 0.5);
