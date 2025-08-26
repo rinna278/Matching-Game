@@ -26,7 +26,8 @@ export class Tile extends Component {
   private tileSize: number = 150;
   private isSelected: boolean = false;
   public skeletonNode: Node | null = null;
-
+  private isHinted: boolean = false;
+  
   init(
     row: number,
     col: number,
@@ -100,15 +101,27 @@ export class Tile extends Component {
   }
 
   select() {
+    if (this.isHinted) {
+    tween(this.node)
+      .to(0.2, { scale: new Vec3(1.12, 1.12, 1) })
+      .start();
+  } else {
+    // nếu không phải hint thì giữ nguyên scale = 1
+    tween(this.node)
+      .to(0.2, { scale: new Vec3(1, 1, 1) })
+      .start();
+  }
+
     this.isSelected = true;
-    // this.node.setScale(1.2, 1.2, 1);
-    this.border();
+    this.updateBorder();
   }
 
   deselect() {
     this.isSelected = false;
-    // this.node.setScale(1, 1, 1);
-    this.border();
+      tween(this.node)
+      .to(0.2, { scale: new Vec3(1, 1, 1) })
+      .start();
+    this.updateBorder();
   }
 
   border() {
@@ -119,6 +132,11 @@ export class Tile extends Component {
     } else {
       if (this.skeletonNode) {
         this.skeletonNode.active = false;
+      }
+    }
+    if(this.isHinted){
+      if(this.skeletonNode){
+        this.skeletonNode.active = true;
       }
     }
   }
@@ -142,4 +160,25 @@ export class Tile extends Component {
   getName(): string {
     return `Tile_${this.row}_${this.col}`;
   }
+
+  hintHighlight() {
+    this.isHinted = true;
+    this.updateBorder();
+    console.log("Hint highlight");
+  }
+
+  hintUnhighlight() {
+    this.isHinted = false;
+    this.updateBorder();
+    tween(this.node)
+      .to(0.2, { scale: new Vec3(1, 1, 1) })
+      .start();
+  }
+
+  private updateBorder() {
+    if (this.skeletonNode) {
+      this.skeletonNode.active = this.isSelected || this.isHinted;
+    }
+  }
+
 }

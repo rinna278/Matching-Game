@@ -3,7 +3,7 @@ const { ccclass, property } = _decorator;
 import { GameManager, GameState } from './GameManager';
 import { Map } from './Map';
 import { ClockLabel } from './ClockLabel';
-
+import { ScoreManager } from './ScoreManager';
 
 @ccclass('PauseButton')
 export class PauseButton extends Component {
@@ -16,31 +16,19 @@ export class PauseButton extends Component {
     @property(ClockLabel)
     clock: ClockLabel | null = null;
 
+    @property(ScoreManager)
+    scoreManager: ScoreManager | null = null;
+    
     handlePopup() {
-        GameManager.isPaused() ? this.pauseMenu!.active = true : this.pauseMenu!.active = false;
-        this.handleTime();
+        if (this.pauseMenu) {
+            this.pauseMenu.active = GameManager.isPaused();
+        }
     }
 
-    handleTime(){
-        if(GameManager.isPaused()){
-            this.clock.pauseClock();
-        }
-        else{
-            this.clock.resumeClock();
-        }
-    }
     onClickPause() {
         if (!this.pauseMenu) return;
-
-         if (GameManager.isPaused()) {
-            // Resume
-            GameManager.setState(GameState.Playing);
-            this.handlePopup();
-        } else {
-            // Pause
-            GameManager.setState(GameState.Paused);
-            this.handlePopup();
-        }
+        GameManager.setState(GameState.Paused);
+        this.handlePopup();
     }
 
     onResume() {
@@ -50,16 +38,20 @@ export class PauseButton extends Component {
 
     onRestart() {
         GameManager.setState(GameState.Playing);
-        this.map.resetMap();
+        if (this.map) {
+            this.map.resetMap();
+        }
+        if (this.clock) {
+            this.clock.resetClock();
+        }
+        if(this.scoreManager){
+            this.scoreManager.resetScore();
+        }
         this.handlePopup();
-        this.clock.resetClock();
     }
 
     // onQuit() {
     //     director.resume();
     //     director.loadScene("MainMenu");
     // }
-
 }
-
-
