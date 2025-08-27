@@ -67,9 +67,9 @@ export class Map extends Component {
   private tiles: Tile[][] = [];
   private themeID: number = 1;
   private lv: number = 1;
-  private width :number = 0;
-  private height :number = 0;
-
+  private width: number = 0;
+  private height: number = 0;
+  private milestoneScore: number[] = [];
   @property(LevelUI)
   levelUI: LevelUI | null = null;
 
@@ -144,6 +144,7 @@ export class Map extends Component {
       this.cols = config.cols;
       // this.tileSize = config.tileSize;
       this.themeID = config.themeID;
+      this.milestoneScore = config.milestoneScore;
 
       // Load tile background
       const tileBGPath = "Tile/icon_tile/spriteFrame";
@@ -165,6 +166,10 @@ export class Map extends Component {
 
           this.generateMap();
           console.log(`Map generated with theme: ${themePath}`);
+          if (this.scoreManager) {
+            this.scoreManager.setMilestoneScore(this.milestoneScore);
+            this.scoreManager.resetScore();
+          }
         });
       });
     });
@@ -176,7 +181,13 @@ export class Map extends Component {
   }
 
   generateMap() {
-    this.tileSize = Math.min(this.width/(this.cols+1.5)*2, this.height/(this.rows+1.5)*2);
+    // Set milestoneScore for scoreManager
+    this.scoreManager?.setMilestoneScore(this.milestoneScore);
+    // Calculate tile size based on screen dimensions and grid size
+    this.tileSize = Math.min(
+      (this.width / (this.cols + 1.5)) * 2,
+      (this.height / (this.rows + 1.5)) * 2
+    );
     this.levelUI?.setLevel(this.lv);
     const spawnPos = new Vec3(0, 0, 0);
     console.log(`Current level is: ${this.lv}`);
@@ -243,7 +254,7 @@ export class Map extends Component {
           skeleton.setScale(scaleX, scaleY, 1);
           // skeleton.setScale(1.75, 1.75, 1);
           skeleton.active = false; // Initially inactive
-          
+
           tileNode.addChild(skeleton);
           tile.skeletonNode = skeleton;
         }
@@ -388,7 +399,9 @@ export class Map extends Component {
 
   private win() {
     console.log("You win!");
-    this.nextLevel();
+    setTimeout(() => {
+      this.nextLevel();
+    }, 1500);
   }
 
   private clearMap() {
@@ -604,7 +617,7 @@ export class Map extends Component {
     setTimeout(() => {
       effect.destroy();
     }, 2000);
-    console.log("Spawned eff at:", gridPos);
+    // console.log("Spawned eff at:", gridPos);
     return true;
   }
 
@@ -646,8 +659,8 @@ export class Map extends Component {
           star.destroy();
         })
         .start();
-      
-      console.log("Spawned star at:", gridPos);
+
+      // console.log("Spawned star at:", gridPos);
     });
   }
 
@@ -681,8 +694,8 @@ export class Map extends Component {
         .to(0.2, { scale: new Vec3(1.5, 1.5, 1) })
         .delay(0.1)
         .start();
-      
-      console.log("Spawned star at:", gridPos);
+
+      // console.log("Spawned star at:", gridPos);
     });
   }
   private spawnLine(
@@ -723,7 +736,8 @@ export class Map extends Component {
 
     this.lineNode.addChild(line);
 
-    const opacity = line.getComponent(UIOpacity) || line.addComponent(UIOpacity);
+    const opacity =
+      line.getComponent(UIOpacity) || line.addComponent(UIOpacity);
     opacity.opacity = 255;
     tween(opacity)
       .to(0.5, { opacity: 0 })
@@ -785,7 +799,7 @@ export class Map extends Component {
         if (!tile1 || !tile1.getIconSprite()) continue;
 
         for (let i2 = i1; i2 < this.rows; i2++) {
-          for (let j2 = (i2 === i1 ? j1 + 1 : 0); j2 < this.cols; j2++) {
+          for (let j2 = i2 === i1 ? j1 + 1 : 0; j2 < this.cols; j2++) {
             const tile2 = this.tiles[i2][j2];
             if (!tile2 || !tile2.getIconSprite()) continue;
 
@@ -837,6 +851,4 @@ export class Map extends Component {
       }
     }
   }
-
-
 }
