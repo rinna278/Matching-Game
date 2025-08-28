@@ -133,6 +133,7 @@ export class Map extends Component {
   }
 
   private loadLevel(lv: number) {
+
     resources.load(this.getLVPath(lv), JsonAsset, (err, asset) => {
       if (err) {
         console.error("Failed to load map config:", err);
@@ -157,18 +158,18 @@ export class Map extends Component {
 
         // Load theme sprites
         const themePath = this.getThemePath(this.themeID);
-        resources.loadDir(themePath, SpriteFrame, (err, assets) => {
+        resources.loadDir(themePath, SpriteFrame, async (err, assets) => {
           if (err) {
             console.error("Failed to load theme sprites:", err);
             return;
           }
           this.objectSprites = assets;
 
-          this.generateMap();
+          await this.generateMap();
           console.log(`Map generated with theme: ${themePath}`);
           if (this.scoreManager) {
-            this.scoreManager.setMilestoneScore(this.milestoneScore);
-            this.scoreManager.resetScore();
+            await this.scoreManager.setMilestoneScore(this.milestoneScore);
+            await this.scoreManager.resetScore();
           }
         });
       });
@@ -401,7 +402,7 @@ export class Map extends Component {
     console.log("You win!");
     setTimeout(() => {
       this.nextLevel();
-    }, 1500);
+    }, 2);
   }
 
   private clearMap() {
@@ -549,6 +550,9 @@ export class Map extends Component {
     );
 
     const queue: State[] = [];
+    let bestSolution: { r: number; c: number }[] | null = null;
+    let bestTotalTurns = INF;
+    let bestPathLength = INF;
 
     // Try all 4 directions from start
     for (let d = 0; d < 4; d++) {
@@ -557,8 +561,15 @@ export class Map extends Component {
     }
 
     while (queue.length > 0) {
+      queue.sort((a, b) => {
+        if (a.turns !== b.turns) return a.turns - b.turns;
+        return a.path.length - b.path.length;
+      });
       const cur = queue.shift()!;
 
+      if (cur.turns > bestTotalTurns || (cur.turns === bestTotalTurns && cur.path.length >= bestPathLength)) {
+        continue;
+      }
       const [dr, dc] = dirs[cur.dir];
       let nr = cur.r + dr;
       let nc = cur.c + dc;
@@ -566,7 +577,14 @@ export class Map extends Component {
 
       while (nr >= 0 && nr < R && nc >= 0 && nc < C && grid[nr][nc] === 0) {
         pathCopy = [...pathCopy, { r: nr, c: nc }];
-        if (nr === tr && nc === tc) return pathCopy;
+        if (nr === tr && nc === tc){
+          if (cur.turns < bestTotalTurns || (cur.turns === bestTotalTurns && pathCopy.length < bestPathLength)) {
+            bestSolution = [...pathCopy];
+            bestTotalTurns = cur.turns;
+            bestPathLength = pathCopy.length;
+          }
+          break;
+        }
 
         if (bestTurns[nr][nc][cur.dir] > cur.turns) {
           bestTurns[nr][nc][cur.dir] = cur.turns;
@@ -591,7 +609,7 @@ export class Map extends Component {
       }
     }
 
-    return null;
+    return bestSolution;
   }
 
   private spawnMatchEffect(gridPos: { r: number; c: number }) {
@@ -644,29 +662,42 @@ export class Map extends Component {
       const y = startY - (gridPos.r - 1) * this.tileSize;
 
       star.setPosition(new Vec3(x, y, 10));
-      const targetPos = new Vec3(300, 1000, 0);
+      let targetPos = this.scoreManager?.getTargetStarPosition();
       this.starNode.addChild(star);
-
+      const currentStarIndex = this.scoreManager?.currentStarIndex || 0;
       //increase score when star reaches target
       tween(star)
-        .to(0.2, { scale: new Vec3(1.5, 1.5, 1) })
-        .delay(0.3 + index * 0.02)
-        .to(0.3, { position: targetPos })
-        .delay(0.1)
-        .call(() => {
-          this.scoreManager?.addScore();
-          resolve();
-          star.destroy();
-        })
-        .start();
-
-      // console.log("Spawned star at:", gridPos);
+      .to(0.3, { scale: new Vec3(2, 2, 1) }, { easing: 'sineOut' })
+      .delay(0.3 + index * 0.1)
+      .to(0.4, { worldPosition: targetPos }, { easing: 'sineOut' })
+      .delay(0.2)
+      .call(() => {
+        const milestoneStars = this.scoreManager?.progressBar?.node.children;
+        if (milestoneStars && this.scoreManager) {
+          const starNode = milestoneStars[currentStarIndex + 1];
+          const tempStarNode = starNode;
+          if (tempStarNode) {
+            tween(tempStarNode)
+              .to(0.3, { scale: new Vec3(1, 1, 1) }, { easing: 'sineOut' })
+              .to(0.2, { scale: new Vec3(0.75, 0.75, 1) }, { easing: 'sineOut' })
+              .start();
+          }
+        }
+        this.scoreManager?.addScore();
+        resolve();
+        tween(star)
+          .to(0.3, { scale: new Vec3(0, 0, 1) }, { easing: 'sineIn' })
+          .call(() => {
+            star.destroy();
+          })
+          .start();
+      })
+      .start();
     });
   }
 
   private spawnStarNotDestroy(
-    gridPos: { r: number; c: number },
-    index: number = 0
+    gridPos: { r: number; c: number }
   ): Promise<void> {
     return new Promise<void>((resolve) => {
       if (!this.starPrefab || !this.starNode) {
@@ -812,8 +843,8 @@ export class Map extends Component {
                   this.spawnLineNotDestroy(path[i], path[i + 1]);
                 }
 
-                path.forEach((pos, index) => {
-                  this.spawnStarNotDestroy(pos, index);
+                path.forEach((pos) => {
+                  this.spawnStarNotDestroy(pos);
                 });
 
                 // spawn effect tại 2 đầu

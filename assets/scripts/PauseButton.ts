@@ -50,8 +50,8 @@ export class PauseButton extends Component {
         this.handlePopup();
     }
 
-    // onQuit() {
-    //     director.resume();
-    //     director.loadScene("MainMenu");
-    // }
+    onQuit() {
+        director.resume();
+        director.loadScene("Home");
+    }
 }

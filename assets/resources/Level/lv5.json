@@ -1,6 +1,7 @@
 {
     "rows": 4,
-    "cols": 6,
-    "tileSize": 200,
-    "themeID": 5
+    "cols": 3,
+    "themeID": 5,
+    "bgmID": 1,
+    "milestoneScore": [20, 30, 60]
 }
