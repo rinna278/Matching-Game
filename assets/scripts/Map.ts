@@ -123,10 +123,6 @@ export class Map extends Component {
     // Get screen size
     this.width = view.getVisibleSize().width;
     this.height = view.getVisibleSize().height;
-    // Initialize audio
-    if (this.audioManager) {
-      this.audioManager.playBackgroundMusic();
-    }
     console.log("Screen size:", this.width, this.height);
     this.loadLevel(this.lv);
     this.levelUI?.setLevel(this.lv);
