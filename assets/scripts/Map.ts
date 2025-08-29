@@ -17,6 +17,7 @@ import {
   Sprite,
   JsonAsset,
   view,
+  BlockInputEvents,
 } from "cc";
 import { Tile } from "./Tile";
 import { AudioManager } from "./AudioManager";
@@ -76,6 +77,8 @@ export class Map extends Component {
   @property(Node)
   hintNode: Node | null = null;
 
+  @property(Node)
+  winMenu: Node | null = null;
   setLevel(lv: number) {
     this.lv = lv;
     if (this.levelUI) {
@@ -307,6 +310,10 @@ export class Map extends Component {
     if (this.firstSelected.getIconSprite() === tile.getIconSprite()) {
       const path = this.canConnect(this.firstSelected, tile);
       if (path) {
+        // block input for these 2 tiles
+        this.firstSelected.node.off(Input.EventType.TOUCH_START);
+        tile.node.off(Input.EventType.TOUCH_START);
+        console.log("block 2 tile successfully")
         // Play match sound
         if (this.audioManager) {
           this.audioManager.playMatchSound();
@@ -339,7 +346,8 @@ export class Map extends Component {
 
         if (!this.hasValidMoves()) {
           if (this.isWin()) {
-            this.win();
+            //hiện popup win:
+            this.showWinMenu();
           } else {
             this.showGameOverMessage();
             this.reshuffleMap();
@@ -396,11 +404,36 @@ export class Map extends Component {
 
   private win() {
     console.log("You win!");
-    setTimeout(() => {
-      this.nextLevel();
-    }, 2);
+    this.nextLevel();
   }
 
+  private showWinMenu(){
+    this.winMenu.active = true;
+    this.winMenu.scale = new Vec3(0, 0, 0); // thu nhỏ ban đầu
+    tween(this.winMenu)
+        .to(0.7, { scale: new Vec3(1, 1, 1) }, { easing: "backOut" })
+        .start();
+
+    const opacity = this.winMenu.getComponent(UIOpacity) || this.winMenu.addComponent(UIOpacity);
+    opacity.opacity = 0;
+    tween(opacity)
+        .to(0.3, { opacity: 255 })
+        .start();
+  }
+  private hideNextLV(){
+    this.winMenu.active = false;
+    tween(this.winMenu)
+      .to(0.2, { scale: new Vec3(0, 0, 0) }, { easing: "backIn" })
+      .call(() => {
+          this.winMenu!.active = false; // tắt sau khi tween xong
+      })
+      .start();
+
+    const opacity = this.winMenu.getComponent(UIOpacity)!;
+    tween(opacity)
+        .to(0.2, { opacity: 0 })
+        .start();
+  }
   private clearMap() {
     // Remove all existing tile nodes
     for (let i = 0; i < this.rows; i++) {

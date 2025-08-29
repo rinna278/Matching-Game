@@ -13,16 +13,19 @@ export class AudioManager extends Component {
   clickSound: AudioClip | null = null;
 
   private audioSource: AudioSource | null = null;
-
+  private clickSource: AudioSource | null = null;
+  private matchSource: AudioSource | null = null;
+  private isMatchSoundPlay: boolean = true;
+  private isClickSoundPlay: boolean = true;
+  private sfxEnabled: boolean = true;
   start() {
-    this.audioSource = this.node.getComponent(AudioSource);
-    if (!this.audioSource) {
-      this.audioSource = this.node.addComponent(AudioSource);
-    }
+    this.audioSource = this.node.addComponent(AudioSource);
+    this.clickSource = this.node.addComponent(AudioSource);
+    this.matchSource = this.node.addComponent(AudioSource);
     this.setUpBGM();
     this.playBackgroundMusic();
   }
-
+  // ==================BGM====================
   setUpBGM() {
     if (this.audioSource && this.backgroundMusic) {
       this.audioSource.clip = this.backgroundMusic;
@@ -31,23 +34,8 @@ export class AudioManager extends Component {
       this.audioSource.volume = 1;
     }
   }
-  playBackgroundMusic() {
-    this.audioSource.play();
-  }
 
-  playMatchSound() {
-    if (this.audioSource && this.matchSound) {
-      this.audioSource.playOneShot(this.matchSound, 1);
-    }
-  }
-
-  playClickSound() {
-    if (this.audioSource && this.clickSound) {
-      this.audioSource.playOneShot(this.clickSound, 0.8);
-    }
-  }
-
-  setBackgroundVolume(volume: number) {
+    setBackgroundVolume(volume: number) {
     if (this.audioSource) {
       this.audioSource.volume = volume;
     }
@@ -57,5 +45,40 @@ export class AudioManager extends Component {
     if (this.audioSource) {
       this.audioSource.pause();
     }
+  }
+
+  playBackgroundMusic() {
+    this.audioSource.play();
+  }
+
+  // ==================== Click Sound ====================
+  playClickSound() {
+    if (!this.sfxEnabled) return;
+    if (this.clickSource && this.clickSound) {
+      this.clickSource.clip = this.clickSound;
+      this.clickSource.loop = false;
+      this.clickSource.play();
+      this.isClickSoundPlay = true;
+    }
+  }
+
+  // ==================== Match Sound ====================
+  playMatchSound() {
+    if (!this.sfxEnabled) return;
+    if (this.matchSource && this.matchSound) {
+      this.matchSource.clip = this.matchSound;
+      this.matchSource.loop = false;
+      this.matchSource.play();
+      this.isMatchSoundPlay = true;
+    }
+  }
+
+  playSfx(){
+    this.playClickSound();
+    this.playMatchSound();
+  }
+
+  setSfxEnabled(enabled: boolean) {
+    this.sfxEnabled = enabled;
   }
 }

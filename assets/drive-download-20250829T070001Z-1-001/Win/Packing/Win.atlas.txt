@@ -1,0 +1,37 @@
+Win.png
+size:796,532
+filter:Linear,Linear
+pma:true
+Arm1
+bounds:543,146,189,154
+rotate:90
+Arm2
+bounds:239,54,189,154
+Banner
+bounds:1,337,696,194
+Body
+bounds:543,32,112,82
+rotate:90
+Eye_Close
+bounds:430,6,202,111
+rotate:90
+Flower3
+bounds:99,33,91,85
+Grass1
+bounds:239,210,302,125
+Head
+bounds:1,120,236,215
+Layer 47
+bounds:1,32,86,96
+rotate:90
+Layer 47 copy
+bounds:627,1,86,96
+rotate:90
+Mouth
+bounds:627,103,44,41
+No
+bounds:725,3,84,48
+rotate:90
+Text
+bounds:699,89,442,94
+rotate:90

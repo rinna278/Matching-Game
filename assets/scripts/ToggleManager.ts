@@ -27,6 +27,8 @@ export class ToggleManager extends Component {
 
   private isOn: boolean = true;
   private isBgmOn: boolean = true;
+  private isSfxOn: boolean = true;
+
   start() {
     this.updateUI(this.isOn);
   }
@@ -66,4 +68,12 @@ export class ToggleManager extends Component {
       }
     }
   }
+
+  toggleSFX(){
+    this.isSfxOn = !this.isSfxOn;
+    if(this.audioManager){
+      this.audioManager.setSfxEnabled(this.isSfxOn);
+    }
+  }
+  
 }

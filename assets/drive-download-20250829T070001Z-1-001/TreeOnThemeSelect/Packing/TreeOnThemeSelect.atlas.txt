@@ -1,0 +1,7 @@
+TreeOnThemeSelect.png
+size:108,92
+filter:Linear,Linear
+pma:true
+scale:0.3
+Tree
+bounds:2,2,104,86

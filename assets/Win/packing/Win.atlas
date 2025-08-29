@@ -1,0 +1,97 @@
+
+Win.png
+size: 424,1024
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+Arm1
+  rotate: false
+  xy: 198, 424
+  size: 189, 154
+  orig: 189, 154
+  offset: 0, 0
+  index: -1
+Arm2
+  rotate: false
+  xy: 219, 170
+  size: 189, 154
+  orig: 189, 154
+  offset: 0, 0
+  index: -1
+Banner
+  rotate: true
+  xy: 2, 326
+  size: 696, 194
+  orig: 696, 194
+  offset: 0, 0
+  index: -1
+Body
+  rotate: false
+  xy: 2, 4
+  size: 112, 82
+  orig: 112, 82
+  offset: 0, 0
+  index: -1
+Eye_Close
+  rotate: false
+  xy: 219, 57
+  size: 202, 111
+  orig: 202, 111
+  offset: 0, 0
+  index: -1
+Flower3
+  rotate: true
+  xy: 286, 331
+  size: 91, 85
+  orig: 91, 85
+  offset: 0, 0
+  index: -1
+Grass1
+  rotate: true
+  xy: 294, 720
+  size: 302, 125
+  orig: 302, 125
+  offset: 0, 0
+  index: -1
+Head
+  rotate: true
+  xy: 2, 88
+  size: 236, 215
+  orig: 236, 215
+  offset: 0, 0
+  index: -1
+Layer 47
+  rotate: false
+  xy: 198, 326
+  size: 86, 96
+  orig: 86, 96
+  offset: 0, 0
+  index: -1
+Layer 47 copy
+  rotate: false
+  xy: 294, 622
+  size: 86, 96
+  orig: 86, 96
+  offset: 0, 0
+  index: -1
+Mouth
+  rotate: true
+  xy: 166, 42
+  size: 44, 41
+  orig: 44, 41
+  offset: 0, 0
+  index: -1
+No
+  rotate: true
+  xy: 116, 2
+  size: 84, 48
+  orig: 84, 48
+  offset: 0, 0
+  index: -1
+Text
+  rotate: true
+  xy: 198, 580
+  size: 442, 94
+  orig: 442, 94
+  offset: 0, 0
+  index: -1

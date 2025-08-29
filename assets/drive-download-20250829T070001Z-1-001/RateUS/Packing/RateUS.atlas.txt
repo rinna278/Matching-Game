@@ -1,0 +1,44 @@
+RateUS.png
+size:560,1036
+filter:Linear,Linear
+pma:true
+Arm1B
+bounds:383,482,87,132
+Arm2B
+bounds:476,491,81,123
+BG1
+bounds:1,623,411,411
+BG2
+bounds:1,241,380,380
+Body
+bounds:472,377,112,82
+rotate:90
+Eye_Close
+bounds:414,832,202,111
+rotate:90
+Hand1B
+bounds:476,122,80,57
+Hand2B
+bounds:476,181,83,58
+Head
+bounds:259,3,236,215
+rotate:90
+Head_Bellow
+bounds:1,1,256,238
+Layer 47
+bounds:383,286,86,96
+Layer 47 copy
+bounds:383,384,86,96
+Layer 47 copy_Bellow
+bounds:414,724,106,116
+rotate:90
+Layer 47_Bellow
+bounds:414,616,106,116
+rotate:90
+Mouth
+bounds:383,243,44,41
+No
+bounds:471,241,84,48
+Star1
+bounds:471,291,84,85
+rotate:90
